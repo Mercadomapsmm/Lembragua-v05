@@ -15,6 +15,7 @@ export interface WaterState {
   vibrationEnabled: boolean;
   lastUpdatedDate: string; // 'YYYY-MM-DD'
   history: WaterHistoryEntry[];
+  confirmedSlots?: string[]; // horários de lembretes de água confirmados hoje
 }
 
 export type MedicineFrequency = 'daily' | 'interval' | 'specific_days';

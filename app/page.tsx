@@ -9,6 +9,7 @@ import {
   triggerAlertEffects,
   sendBrowserNotification,
   hasNotificationPermission,
+  ALERT_REPEAT_INTERVAL_MS,
 } from '@/lib/notifications';
 import { Header } from '@/components/Header';
 import { HomeScreen } from '@/components/HomeScreen';
@@ -35,7 +36,8 @@ export default function Page() {
   const [isOnline, setIsOnline] = useState<boolean>(() =>
     typeof navigator !== 'undefined' ? navigator.onLine : true
   );
-  const alertedSetRef = useRef<Set<string>>(new Set());
+  // Track last triggered timestamp and repeat count for 3-minute recurring alerts
+  const alertRepeatTrackingRef = useRef<Map<string, { lastTriggeredAt: number; count: number }>>(new Map());
 
   // Listen to connectivity changes
   useEffect(() => {
@@ -83,41 +85,100 @@ export default function Page() {
     updateData(() => newData);
   };
 
-  // Periodic alarm verification
+  // Periodic alarm verification: aciona de 3 em 3 minutos até ser confirmado
   useEffect(() => {
     if (!data) return;
 
-    const interval = setInterval(() => {
+    const checkAndTriggerAlerts = () => {
       const todayStr = getTodayString();
       const currentAlerts = checkActiveAlerts(data, todayStr);
+      const activeIds = new Set(currentAlerts.map((a) => a.id));
 
-      for (const alert of currentAlerts) {
-        if (!alertedSetRef.current.has(alert.id)) {
-          alertedSetRef.current.add(alert.id);
-          setActiveAlert(alert);
-          triggerAlertEffects(alert.type);
-          sendBrowserNotification(alert.title, alert.message);
-          break;
+      // Limpa alertas que já foram confirmados ou não estão mais pendentes
+      for (const key of alertRepeatTrackingRef.current.keys()) {
+        if (!activeIds.has(key)) {
+          alertRepeatTrackingRef.current.delete(key);
         }
       }
-    }, 20000); // Check every 20 seconds
+
+      // Se o alerta ativo foi confirmado na interface, fecha a faixa
+      if (activeAlert && !activeIds.has(activeAlert.id)) {
+        setActiveAlert(null);
+      }
+
+      const nowMs = Date.now();
+      for (const alert of currentAlerts) {
+        const tracking = alertRepeatTrackingRef.current.get(alert.id);
+        const shouldTrigger =
+          !tracking || nowMs - tracking.lastTriggeredAt >= ALERT_REPEAT_INTERVAL_MS;
+
+        if (shouldTrigger) {
+          const newCount = (tracking?.count || 0) + 1;
+          alertRepeatTrackingRef.current.set(alert.id, {
+            lastTriggeredAt: nowMs,
+            count: newCount,
+          });
+
+          const alertWithRepeat: ActiveAlert = {
+            ...alert,
+            repeatCount: newCount,
+          };
+
+          setActiveAlert(alertWithRepeat);
+          triggerAlertEffects(alert.type);
+          sendBrowserNotification(
+            newCount > 1 ? `(${newCount}º aviso) ${alert.title}` : alert.title,
+            `${alert.message} (Aciona a cada 3 min até confirmar)`
+          );
+          break; // Aciona o alerta pendente principal
+        }
+      }
+    };
+
+    // Executa verificação inicial imediata e a cada 5 segundos
+    checkAndTriggerAlerts();
+    const interval = setInterval(checkAndTriggerAlerts, 5000);
 
     return () => clearInterval(interval);
-  }, [data]);
+  }, [data, activeAlert]);
 
   // Quick drink 250ml
   const handleQuickDrinkWater = (amountMl: number) => {
+    const todayStr = getTodayString();
+    const currentAlerts = checkActiveAlerts(data, todayStr);
+    const activeWaterAlert = currentAlerts.find((a) => a.type === 'water');
+
     updateWater((prev) => ({
       ...prev,
       consumedMl: prev.consumedMl + amountMl,
+      confirmedSlots: activeWaterAlert
+        ? [
+            ...(prev.confirmedSlots || []).filter((s) => s !== activeWaterAlert.time),
+            activeWaterAlert.time,
+          ]
+        : prev.confirmedSlots,
     }));
+
+    if (activeWaterAlert) {
+      alertRepeatTrackingRef.current.delete(activeWaterAlert.id);
+      if (activeAlert?.id === activeWaterAlert.id) {
+        setActiveAlert(null);
+      }
+    }
   };
 
   // Confirm active alert action
   const handleConfirmAlertAction = (alert: ActiveAlert) => {
     const todayStr = getTodayString();
     if (alert.type === 'water') {
-      handleQuickDrinkWater(250);
+      updateWater((prev) => ({
+        ...prev,
+        consumedMl: prev.consumedMl + 250,
+        confirmedSlots: [
+          ...(prev.confirmedSlots || []).filter((s) => s !== alert.time),
+          alert.time,
+        ],
+      }));
     } else if (alert.type === 'medicine' && alert.medicineId) {
       const now = new Date();
       const currentClock = `${String(now.getHours()).padStart(2, '0')}:${String(
@@ -140,6 +201,9 @@ export default function Page() {
         }),
       }));
     }
+
+    // Remove do rastreamento de 3 em 3 minutos e fecha o alerta
+    alertRepeatTrackingRef.current.delete(alert.id);
     setActiveAlert(null);
   };
 

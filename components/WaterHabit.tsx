@@ -57,9 +57,22 @@ export function WaterHabit({ waterState, onUpdate }: WaterHabitProps) {
   const handleDrink = (amount: number) => {
     onUpdate((prev) => {
       const nextAmount = prev.consumedMl + amount;
+      const now = new Date();
+      const currentMinutes = now.getHours() * 60 + now.getMinutes();
+      const confirmedSlots = prev.confirmedSlots || [];
+      const dueUnconfirmed = prev.reminderTimes.filter((t) => {
+        const [h, m] = t.split(':').map(Number);
+        return currentMinutes >= h * 60 + m && !confirmedSlots.includes(t);
+      });
+      const updatedSlots =
+        dueUnconfirmed.length > 0
+          ? [...confirmedSlots, dueUnconfirmed[0]]
+          : confirmedSlots;
+
       return {
         ...prev,
         consumedMl: nextAmount,
+        confirmedSlots: updatedSlots,
       };
     });
 

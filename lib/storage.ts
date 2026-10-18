@@ -59,6 +59,7 @@ export const defaultInitialData: AppData = {
     vibrationEnabled: true,
     lastUpdatedDate: getTodayString(),
     history: [],
+    confirmedSlots: [],
   },
   medicine: {
     medicines: [
@@ -140,6 +141,7 @@ export function loadAppData(): AppData {
       vibrationEnabled: parsed.water?.vibrationEnabled ?? true,
       lastUpdatedDate: parsed.water?.lastUpdatedDate || today,
       history: Array.isArray(parsed.water?.history) ? parsed.water.history : [],
+      confirmedSlots: Array.isArray(parsed.water?.confirmedSlots) ? parsed.water.confirmedSlots : [],
     };
 
     // New day transition for water tracking
@@ -155,6 +157,7 @@ export function loadAppData(): AppData {
         ];
       }
       water.consumedMl = 0;
+      water.confirmedSlots = [];
       water.lastUpdatedDate = today;
       needsSave = true;
     }

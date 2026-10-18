@@ -1,6 +1,8 @@
 import { AppData, Medicine } from './types';
 import { sounds, triggerVibration } from './sound';
 
+export const ALERT_REPEAT_INTERVAL_MS = 3 * 60 * 1000; // 3 minutos
+
 export interface ActiveAlert {
   id: string;
   type: 'water' | 'medicine';
@@ -8,6 +10,8 @@ export interface ActiveAlert {
   message: string;
   medicineId?: string;
   time: string;
+  scheduledMinutes?: number;
+  repeatCount?: number;
 }
 
 export async function requestNotificationPermission(): Promise<boolean> {
@@ -60,30 +64,14 @@ export function minutesToTime(totalMinutes: number): string {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
-// Checks which habit alerts are due right now
+// Checks which habit alerts are due and unconfirmed right now
 export function checkActiveAlerts(data: AppData, todayStr: string): ActiveAlert[] {
   const alerts: ActiveAlert[] = [];
   const now = new Date();
-  const currentHour = String(now.getHours()).padStart(2, '0');
-  const currentMinute = String(now.getMinutes()).padStart(2, '0');
-  const currentTime = `${currentHour}:${currentMinute}`;
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
   const currentDayOfWeek = now.getDay(); // 0 = Domingo, 1 = Segunda, ...
 
-  // 1. Water check
-  if (
-    data.water.reminderTimes.includes(currentTime) &&
-    data.water.consumedMl < data.water.dailyGoalMl
-  ) {
-    alerts.push({
-      id: `water-${currentTime}`,
-      type: 'water',
-      title: '💧 Hora de beber água!',
-      message: 'Mantenha seu corpo hidratado. Beba um copo de água agora.',
-      time: currentTime,
-    });
-  }
-
-  // 2. Medicine check
+  // 1. Medicine check (unconfirmed doses whose scheduled time has arrived)
   data.medicine.medicines.forEach((med: Medicine) => {
     // If set to specific days, verify today is scheduled
     if (
@@ -96,7 +84,8 @@ export function checkActiveAlerts(data: AppData, todayStr: string): ActiveAlert[
     }
 
     med.times.forEach((t) => {
-      if (t === currentTime) {
+      const schedMinutes = timeToMinutes(t);
+      if (currentMinutes >= schedMinutes) {
         const alreadyTaken = med.history.some(
           (h) => h.date === todayStr && h.time === t
         );
@@ -108,13 +97,36 @@ export function checkActiveAlerts(data: AppData, todayStr: string): ActiveAlert[
             message: `Dosagem: ${med.dosage}. ${med.notes ? `(${med.notes})` : ''}`,
             medicineId: med.id,
             time: t,
+            scheduledMinutes: schedMinutes,
           });
         }
       }
     });
   });
 
-  return alerts;
+  // 2. Water check (unconfirmed reminder slots whose scheduled time has arrived)
+  if (data.water.consumedMl < data.water.dailyGoalMl) {
+    const confirmedSlots = data.water.confirmedSlots || [];
+    data.water.reminderTimes.forEach((t) => {
+      const schedMinutes = timeToMinutes(t);
+      if (currentMinutes >= schedMinutes) {
+        const alreadyConfirmed = confirmedSlots.includes(t);
+        if (!alreadyConfirmed) {
+          alerts.push({
+            id: `water-${t}`,
+            type: 'water',
+            title: '💧 Hora de beber água!',
+            message: 'Mantenha seu corpo hidratado. Beba um copo de água agora.',
+            time: t,
+            scheduledMinutes: schedMinutes,
+          });
+        }
+      }
+    });
+  }
+
+  // Sort alerts with the most recent scheduled time first
+  return alerts.sort((a, b) => (b.scheduledMinutes || 0) - (a.scheduledMinutes || 0));
 }
 
 // Trigger alert sound & vibration

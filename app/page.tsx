@@ -52,12 +52,21 @@ export default function Page() {
     };
   }, []);
 
-  // Synchronize document dark class and color-scheme for Branco and Dark modes
+  // Synchronize document dark class, color-scheme, and status bar color to match navbar
   useEffect(() => {
     if (typeof document !== 'undefined') {
       const isDark = data?.settings?.theme === 'dark';
       document.documentElement.classList.toggle('dark', isDark);
       document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
+
+      const navColor = isDark ? '#0f172a' : '#ffffff';
+      let metaThemeColor = document.querySelector('meta[name="theme-color"]:not([media])');
+      if (!metaThemeColor) {
+        metaThemeColor = document.createElement('meta');
+        metaThemeColor.setAttribute('name', 'theme-color');
+        document.head.appendChild(metaThemeColor);
+      }
+      metaThemeColor.setAttribute('content', navColor);
     }
   }, [data?.settings?.theme]);
 

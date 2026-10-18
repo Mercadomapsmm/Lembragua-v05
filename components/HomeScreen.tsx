@@ -139,6 +139,31 @@ export function HomeScreen({
                 </span>
               </div>
             </div>
+
+            {/* Horários de hoje com risco quando confirmados */}
+            <div className="mt-3.5 p-2.5 rounded-2xl bg-sky-50/70 dark:bg-sky-950/40 border border-sky-100 dark:border-sky-800 flex items-center justify-between gap-2 flex-wrap">
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Horários de hoje:</span>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {data.water.reminderTimes.map((t) => {
+                  const isConfirmed =
+                    (data.water.confirmedSlots || []).includes(t) ||
+                    data.water.consumedMl >= data.water.dailyGoalMl;
+                  return (
+                    <span
+                      key={t}
+                      className={`text-[11px] font-bold px-1.5 py-0.5 rounded-md transition ${
+                        isConfirmed
+                          ? 'line-through decoration-emerald-500 dark:decoration-emerald-400 decoration-2 text-slate-400 dark:text-slate-500 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800'
+                          : 'text-sky-800 dark:text-sky-200 bg-white dark:bg-slate-800 border border-sky-200 dark:border-sky-700 shadow-2xs'
+                      }`}
+                      title={isConfirmed ? `${t} - Confirmado` : `${t} - Pendente`}
+                    >
+                      {t}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
           </div>
 
           {/* Quick Action Button */}

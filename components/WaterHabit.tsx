@@ -103,6 +103,30 @@ export function WaterHabit({ waterState, onUpdate }: WaterHabitProps) {
     }));
   };
 
+  // Toggle confirmation for a specific water slot
+  const handleToggleConfirmSlot = (slotTime: string) => {
+    const isAlready = (waterState.confirmedSlots || []).includes(slotTime);
+    onUpdate((prev) => {
+      const confirmed = prev.confirmedSlots || [];
+      if (isAlready) {
+        return {
+          ...prev,
+          confirmedSlots: confirmed.filter((s) => s !== slotTime),
+        };
+      } else {
+        return {
+          ...prev,
+          consumedMl: prev.consumedMl + selectedGlassMl,
+          confirmedSlots: [...confirmed, slotTime],
+        };
+      }
+    });
+    if (!isAlready) {
+      if (waterState.soundEnabled) sounds.playWaterDrop();
+      if (waterState.vibrationEnabled) triggerVibration([80, 50, 80]);
+    }
+  };
+
   // Apply new goal calculated by weight
   const handleApplyWeightGoal = () => {
     const finalGoal = Math.max(500, Math.min(10000, calculatedGoalMl));
@@ -308,6 +332,95 @@ export function WaterHabit({ waterState, onUpdate }: WaterHabitProps) {
         </div>
       </div>
 
+      {/* Horários de Beber Água Hoje com Risco quando Confirmado */}
+      <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-3xl border-2 border-slate-100 dark:border-slate-800 shadow-xs space-y-3.5 transition-colors">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-sky-100 dark:bg-sky-950/60 flex items-center justify-center text-sky-600 dark:text-sky-400">
+              <Clock className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-sm font-black text-slate-800 dark:text-white">
+                Horários de Beber Água Hoje
+              </h3>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                Os horários confirmados ficam riscados automaticamente
+              </p>
+            </div>
+          </div>
+          <span className="text-xs font-black text-sky-800 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/60 px-3 py-1 rounded-full border border-sky-200 dark:border-sky-800">
+            {waterState.reminderTimes.filter((t) => (waterState.confirmedSlots || []).includes(t) || waterState.consumedMl >= waterState.dailyGoalMl).length} de {waterState.reminderTimes.length} confirmados
+          </span>
+        </div>
+
+        {/* Schedule Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-2.5">
+          {waterState.reminderTimes.map((t) => {
+            const isConfirmed =
+              (waterState.confirmedSlots || []).includes(t) ||
+              waterState.consumedMl >= waterState.dailyGoalMl;
+
+            return (
+              <div
+                key={t}
+                className={`p-3 rounded-2xl border flex items-center justify-between gap-2 transition ${
+                  isConfirmed
+                    ? 'bg-emerald-50/70 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-700/80 shadow-2xs'
+                    : 'bg-slate-50/70 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700'
+                }`}
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm">💧</span>
+                    <span
+                      className={`text-sm sm:text-base font-black tracking-tight ${
+                        isConfirmed
+                          ? 'line-through decoration-emerald-500 dark:decoration-emerald-400 decoration-2 text-slate-400 dark:text-slate-500'
+                          : 'text-slate-900 dark:text-white'
+                      }`}
+                    >
+                      {t}
+                    </span>
+                  </div>
+                  <div className="text-[10px] sm:text-[11px] font-bold mt-0.5">
+                    {isConfirmed ? (
+                      <span className="text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                        <Check className="w-3 h-3 stroke-[3]" /> Confirmado
+                      </span>
+                    ) : (
+                      <span className="text-amber-600 dark:text-amber-400">Pendente hoje</span>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  {isConfirmed ? (
+                    <button
+                      type="button"
+                      onClick={() => handleToggleConfirmSlot(t)}
+                      className="px-2.5 py-1 text-[11px] font-bold text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-white dark:hover:bg-slate-800 transition cursor-pointer"
+                      title="Desmarcar confirmação deste horário"
+                    >
+                      Desfazer
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleToggleConfirmSlot(t)}
+                      className="px-3 py-1.5 bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-600 hover:to-sky-700 text-white font-bold text-xs rounded-xl shadow-xs transition active:scale-95 cursor-pointer flex items-center gap-1"
+                      title="Confirmar que bebeu água neste horário"
+                    >
+                      <Check className="w-3.5 h-3.5 stroke-[3]" />
+                      Bebi!
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Histórico dos Últimos 7 Dias de Água */}
       {(() => {
         const todayStr = getTodayString();
@@ -456,24 +569,45 @@ export function WaterHabit({ waterState, onUpdate }: WaterHabitProps) {
                 </button>
               </div>
 
-              {/* Time chips */}
+              {/* Time chips com risco quando confirmado */}
               <div className="flex flex-wrap gap-2">
-                {waterState.reminderTimes.map((t) => (
-                  <span
-                    key={t}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-sky-50 dark:bg-sky-950/60 border border-sky-200 dark:border-sky-800 text-sky-800 dark:text-sky-200 rounded-xl text-xs font-bold"
-                  >
-                    {t}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveTime(t)}
-                      className="text-sky-400 hover:text-red-500 transition cursor-pointer"
-                      title="Remover horário"
+                {waterState.reminderTimes.map((t) => {
+                  const isConfirmed =
+                    (waterState.confirmedSlots || []).includes(t) ||
+                    waterState.consumedMl >= waterState.dailyGoalMl;
+
+                  return (
+                    <span
+                      key={t}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-xl text-xs font-bold transition ${
+                        isConfirmed
+                          ? 'bg-emerald-50/70 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 shadow-2xs'
+                          : 'bg-sky-50 dark:bg-sky-950/60 border-sky-200 dark:border-sky-800 text-sky-800 dark:text-sky-200'
+                      }`}
                     >
-                      ×
-                    </button>
-                  </span>
-                ))}
+                      <span
+                        className={
+                          isConfirmed
+                            ? 'line-through decoration-emerald-500 dark:decoration-emerald-400 decoration-2 text-slate-400 dark:text-slate-500'
+                            : ''
+                        }
+                      >
+                        {t}
+                      </span>
+                      {isConfirmed && (
+                        <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 stroke-[3]" />
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveTime(t)}
+                        className="text-sky-400 hover:text-red-500 transition cursor-pointer ml-0.5"
+                        title="Remover horário"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  );
+                })}
               </div>
 
               {/* Add custom time */}

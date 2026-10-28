@@ -35,7 +35,7 @@ export function AboutModal({
           </h2>
           <div className="inline-flex items-center gap-1.5 px-3 py-1 mt-1 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
             <ShieldCheck className="w-3.5 h-3.5" />
-            Versão 1.0.0 • Gratuito & 100% Offline
+            Versão 1.0.0 • 100% Offline
           </div>
         </div>
         <p className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-300 max-w-md mx-auto">

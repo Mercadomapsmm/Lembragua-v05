@@ -254,7 +254,7 @@ export function InstallAppModal({ isOpen, onClose }: InstallAppModalProps) {
         {/* Modal Footer */}
         <div className="p-4 bg-slate-50 dark:bg-slate-850 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
           <span className="text-[11px] text-slate-500 dark:text-slate-400">
-            Lembragua.online • 100% Gratuito
+            Lembragua.online • 100% Offline
           </span>
           <button
             type="button"

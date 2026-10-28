@@ -394,7 +394,7 @@ export default function Page() {
 
       {/* Offline Toast Indicator */}
       {!isOnline && (
-        <div className="fixed bottom-34 left-4 z-50 flex items-center gap-2 rounded-xl bg-slate-800 text-white px-3.5 py-2 text-xs font-bold shadow-lg border border-slate-700">
+        <div className="fixed bottom-20 left-4 z-50 flex items-center gap-2 rounded-xl bg-slate-800 text-white px-3.5 py-2 text-xs font-bold shadow-lg border border-slate-700">
           <WifiOff className="w-4 h-4 text-amber-400" />
           <span>Modo Offline: tudo salvo no aparelho.</span>
         </div>
@@ -407,7 +407,7 @@ export default function Page() {
       />
 
       {/* Main Content Area with Smooth Page Transitions */}
-      <div className="flex-1 w-full bg-slate-50/60 dark:bg-slate-950 pb-[calc(118px+env(safe-area-inset-bottom,0px))]">
+      <div className="flex-1 w-full bg-slate-50/60 dark:bg-slate-950 pb-[calc(68px+env(safe-area-inset-bottom,0px))]">
         <main className="max-w-4xl xl:max-w-5xl w-full mx-auto px-3 sm:px-5 md:px-6 pt-3 sm:pt-6 pb-4 overflow-x-clip">
           <AnimatePresence mode="wait">
             <motion.div
@@ -457,8 +457,8 @@ export default function Page() {
         </main>
       </div>
 
-      {/* Elevated Quick Navigation Bar (one position above bottom) */}
-      <nav className="fixed bottom-[calc(56px+env(safe-area-inset-bottom,0px))] left-0 right-0 w-full z-40 bg-[#ffffff] dark:bg-[#0f172a] shadow-[0_2px_0_0_#ffffff] dark:shadow-[0_2px_0_0_#0f172a] border-t border-slate-200/80 dark:border-slate-800">
+      {/* Bottom Quick Navigation Bar */}
+      <nav className="fixed bottom-0 left-0 right-0 w-full z-40 pb-[env(safe-area-inset-bottom,0px)] bg-[#ffffff] dark:bg-[#0f172a] border-t border-slate-200/80 dark:border-slate-800">
         <div className="max-w-md sm:max-w-lg lg:max-w-xl mx-auto px-2 sm:px-4 py-1.5 sm:py-2 flex items-center justify-around gap-1 sm:gap-2">
           {/* Home */}
           <button
@@ -531,12 +531,6 @@ export default function Page() {
           </button>
         </div>
       </nav>
-
-      {/* Dedicated 56px bottom-0 bar so mobile system navigation bar / chin matches status bar color */}
-      <div
-        aria-hidden="true"
-        className="fixed bottom-0 left-0 right-0 w-full h-[calc(56px+env(safe-area-inset-bottom,0px))] z-40 bg-[#ffffff] dark:bg-[#0f172a] pointer-events-none"
-      />
     </div>
   );
 }

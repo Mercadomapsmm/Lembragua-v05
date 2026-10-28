@@ -9,10 +9,10 @@
   "background_color": "#0f172a",
   "theme_color": "#0f172a",
   "themeColorDark": "#0f172a",
-  "navigationColor": "#0f172a",
-  "navigationColorDark": "#0f172a",
-  "navigationDividerColor": "#0f172a",
-  "navigationDividerColorDark": "#0f172a",
+  "navigationColor": "#1e3a8a",
+  "navigationColorDark": "#1e3a8a",
+  "navigationDividerColor": "#1e3a8a",
+  "navigationDividerColorDark": "#1e3a8a",
   "orientation": "portrait",
   "icons": [
     {

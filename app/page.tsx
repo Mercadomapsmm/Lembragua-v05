@@ -97,13 +97,15 @@ export default function Page() {
       }
       colorSchemeMeta.setAttribute('content', scheme);
 
+      const navBarColor = '#1e3a8a';
+
       let msNavMeta = document.querySelector('meta[name="msapplication-navbutton-color"]');
       if (!msNavMeta) {
         msNavMeta = document.createElement('meta');
         msNavMeta.setAttribute('name', 'msapplication-navbutton-color');
         document.head.appendChild(msNavMeta);
       }
-      msNavMeta.setAttribute('content', systemBarColor);
+      msNavMeta.setAttribute('content', navBarColor);
 
       const manifestLink = document.querySelector('link[rel="manifest"]');
       if (manifestLink) {
@@ -118,17 +120,21 @@ export default function Page() {
           Android?: {
             setNavigationBarColor?: (hex: string) => void;
             setStatusBarColor?: (hex: string) => void;
-            setSystemBarsColor?: (hex: string) => void;
           };
           ReactNativeWebView?: { postMessage?: (msg: string) => void };
         };
-        win.NavigationBar?.backgroundColorByHexString?.(systemBarColor, !isDark);
+        win.NavigationBar?.backgroundColorByHexString?.(navBarColor, false);
         win.StatusBar?.backgroundColorByHexString?.(systemBarColor);
-        win.Android?.setNavigationBarColor?.(systemBarColor);
+        win.Android?.setNavigationBarColor?.(navBarColor);
         win.Android?.setStatusBarColor?.(systemBarColor);
-        win.Android?.setSystemBarsColor?.(systemBarColor);
         win.ReactNativeWebView?.postMessage?.(
-          JSON.stringify({ type: 'SYSTEM_BARS_COLOR', color: systemBarColor, dark: isDark })
+          JSON.stringify({
+            type: 'SYSTEM_BARS_COLOR',
+            color: systemBarColor,
+            statusBarColor: systemBarColor,
+            navigationBarColor: navBarColor,
+            dark: isDark,
+          })
         );
       } catch {
         // Ignore when running in standard browser/PWA
@@ -457,8 +463,8 @@ export default function Page() {
         </main>
       </div>
 
-      {/* Bottom Quick Navigation Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 w-full z-40 pb-[env(safe-area-inset-bottom,0px)] bg-[#ffffff] dark:bg-[#0f172a] border-t border-slate-200/80 dark:border-slate-800">
+      {/* Bottom Quick Navigation Bar (Dark Blue / Azul Escuro) */}
+      <nav className="fixed bottom-0 left-0 right-0 w-full z-40 pb-[env(safe-area-inset-bottom,0px)] bg-[#1e3a8a] border-t border-blue-800">
         <div className="max-w-md sm:max-w-lg lg:max-w-xl mx-auto px-2 sm:px-4 py-1.5 sm:py-2 flex items-center justify-around gap-1 sm:gap-2">
           {/* Home */}
           <button
@@ -466,8 +472,8 @@ export default function Page() {
             onClick={() => setCurrentTab('home')}
             className={`flex flex-col items-center justify-center py-1 sm:py-1.5 px-1 sm:px-3 min-h-[44px] rounded-2xl transition cursor-pointer flex-1 min-w-0 ${
               currentTab === 'home'
-                ? 'text-sky-600 dark:text-sky-400 font-black bg-sky-50 dark:bg-sky-950/60 shadow-2xs'
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                ? 'text-white font-black bg-white/20 ring-1 ring-white/30 shadow-2xs'
+                : 'text-blue-100/80 hover:text-white hover:bg-white/10'
             }`}
           >
             <span className="text-lg sm:text-xl leading-none">🏠</span>
@@ -480,8 +486,8 @@ export default function Page() {
             onClick={() => setCurrentTab('water')}
             className={`flex flex-col items-center justify-center py-1 sm:py-1.5 px-1 sm:px-3 min-h-[44px] rounded-2xl transition cursor-pointer flex-1 min-w-0 ${
               currentTab === 'water'
-                ? 'text-sky-600 dark:text-sky-400 font-black bg-sky-50 dark:bg-sky-950/60 shadow-2xs'
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                ? 'text-sky-200 font-black bg-white/20 ring-1 ring-sky-300/40 shadow-2xs'
+                : 'text-blue-100/80 hover:text-white hover:bg-white/10'
             }`}
           >
             <span className="text-lg sm:text-xl leading-none">💧</span>
@@ -494,8 +500,8 @@ export default function Page() {
             onClick={() => setCurrentTab('medicine')}
             className={`flex flex-col items-center justify-center py-1 sm:py-1.5 px-1 sm:px-3 min-h-[44px] rounded-2xl transition cursor-pointer flex-1 min-w-0 ${
               currentTab === 'medicine'
-                ? 'text-amber-600 dark:text-amber-400 font-black bg-amber-50 dark:bg-amber-950/60 shadow-2xs'
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                ? 'text-amber-200 font-black bg-white/20 ring-1 ring-amber-300/40 shadow-2xs'
+                : 'text-blue-100/80 hover:text-white hover:bg-white/10'
             }`}
           >
             <span className="text-lg sm:text-xl leading-none">💊</span>
@@ -508,8 +514,8 @@ export default function Page() {
             onClick={() => setCurrentTab('evolution')}
             className={`flex flex-col items-center justify-center py-1 sm:py-1.5 px-1 sm:px-3 min-h-[44px] rounded-2xl transition cursor-pointer flex-1 min-w-0 ${
               currentTab === 'evolution'
-                ? 'text-teal-600 dark:text-teal-400 font-black bg-teal-50 dark:bg-teal-950/60 shadow-2xs'
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                ? 'text-teal-200 font-black bg-white/20 ring-1 ring-teal-300/40 shadow-2xs'
+                : 'text-blue-100/80 hover:text-white hover:bg-white/10'
             }`}
           >
             <span className="text-lg sm:text-xl leading-none">📈</span>
@@ -522,8 +528,8 @@ export default function Page() {
             onClick={() => setCurrentTab('about')}
             className={`flex flex-col items-center justify-center py-1 sm:py-1.5 px-1 sm:px-3 min-h-[44px] rounded-2xl transition cursor-pointer flex-1 min-w-0 ${
               currentTab === 'about'
-                ? 'text-indigo-600 dark:text-indigo-400 font-black bg-indigo-50 dark:bg-indigo-950/60 shadow-2xs'
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                ? 'text-white font-black bg-white/20 ring-1 ring-indigo-300/40 shadow-2xs'
+                : 'text-blue-100/80 hover:text-white hover:bg-white/10'
             }`}
           >
             <span className="text-lg sm:text-xl leading-none">⚙️</span>

@@ -14,10 +14,10 @@ export default function manifest(): MetadataRoute.Manifest {
     orientation: 'portrait',
     ...({
       themeColorDark: '#0f172a',
-      navigationColor: '#ffffff',
-      navigationColorDark: '#0f172a',
-      navigationDividerColor: '#ffffff',
-      navigationDividerColorDark: '#0f172a',
+      navigationColor: '#1e3a8a',
+      navigationColorDark: '#1e3a8a',
+      navigationDividerColor: '#1e3a8a',
+      navigationDividerColorDark: '#1e3a8a',
     } as Record<string, string>),
     icons: [
       {

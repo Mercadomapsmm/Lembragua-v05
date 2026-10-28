@@ -49,7 +49,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <meta name="theme-color" content="#ffffff" suppressHydrationWarning />
         <meta name="color-scheme" content="light" suppressHydrationWarning />
-        <meta name="msapplication-navbutton-color" content="#ffffff" suppressHydrationWarning />
+        <meta name="msapplication-navbutton-color" content="#1e3a8a" suppressHydrationWarning />
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -77,7 +77,7 @@ export default function RootLayout({
                   var cs = document.querySelector('meta[name="color-scheme"]');
                   if (cs) cs.setAttribute('content', scheme);
                   var msNav = document.querySelector('meta[name="msapplication-navbutton-color"]');
-                  if (msNav) msNav.setAttribute('content', barColor);
+                  if (msNav) msNav.setAttribute('content', '#1e3a8a');
                   var manifestLink = document.querySelector('link[rel="manifest"]');
                   if (manifestLink) {
                     manifestLink.setAttribute('href', isDark ? '/manifest-dark.json' : '/manifest.webmanifest');

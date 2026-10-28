@@ -6,13 +6,22 @@
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "background_color": "#ffffff",
   "theme_color": "#ffffff",
+  "dark_theme_color": "#0f172a",
+  "dark_background_color": "#0f172a",
   "themeColorDark": "#0f172a",
-  "navigationColor": "#1e3a8a",
-  "navigationColorDark": "#1e3a8a",
-  "navigationDividerColor": "#1e3a8a",
-  "navigationDividerColorDark": "#1e3a8a",
+  "navigationColor": "#ffffff",
+  "navigationColorDark": "#0f172a",
+  "navigationDividerColor": "#ffffff",
+  "navigationDividerColorDark": "#0f172a",
+  "user_preferences": {
+    "color_scheme_dark": {
+      "theme_color": "#0f172a",
+      "background_color": "#0f172a"
+    }
+  },
   "orientation": "portrait",
   "icons": [
     {

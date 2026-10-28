@@ -1,11 +1,21 @@
 import type { Metadata, Viewport } from 'next';
+import { cookies } from 'next/headers';
 import './globals.css';
 
-export const viewport: Viewport = {
-  width: 'device-width',
-  initialScale: 1,
-  maximumScale: 5,
-};
+export async function generateViewport(): Promise<Viewport> {
+  const cookieStore = await cookies();
+  const isDark = cookieStore.get('lembragua_theme')?.value === 'dark';
+  const barColor = isDark ? '#0f172a' : '#ffffff';
+
+  return {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 5,
+    viewportFit: 'cover',
+    themeColor: barColor,
+    colorScheme: isDark ? 'dark' : 'light',
+  };
+}
 
 export const metadata: Metadata = {
   title: 'Lembragua.online - Água e Remédios',
@@ -37,28 +47,41 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const cookieStore = await cookies();
+  const isServerDark = cookieStore.get('lembragua_theme')?.value === 'dark';
+  const initialBarColor = isServerDark ? '#0f172a' : '#ffffff';
+
   return (
-    <html lang="pt-BR" className="bg-[#ffffff] dark:bg-[#0f172a]" suppressHydrationWarning>
+    <html
+      lang="pt-BR"
+      className={`${isServerDark ? 'dark ' : ''}bg-[#ffffff] dark:bg-[#0f172a]`}
+      suppressHydrationWarning
+    >
       <head>
         <link rel="icon" href="/icon.svg" type="image/svg+xml" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-        <meta name="theme-color" content="#ffffff" suppressHydrationWarning />
-        <meta name="color-scheme" content="light" suppressHydrationWarning />
-        <meta name="msapplication-navbutton-color" content="#1e3a8a" suppressHydrationWarning />
+        <meta name="msapplication-navbutton-color" content={initialBarColor} suppressHydrationWarning />
         <script
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
                 try {
                   var raw = localStorage.getItem('habitos_simples_v1');
-                  var isDark = !!(raw && JSON.parse(raw)?.settings?.theme === 'dark');
+                  var hasSaved = !!raw;
+                  var isDark = hasSaved
+                    ? JSON.parse(raw)?.settings?.theme === 'dark'
+                    : document.documentElement.classList.contains('dark');
                   var barColor = isDark ? '#0f172a' : '#ffffff';
                   var scheme = isDark ? 'dark' : 'light';
+                  var cookieAttrs = window.location.protocol === 'https:'
+                    ? '; path=/; max-age=31536000; SameSite=None; Secure'
+                    : '; path=/; max-age=31536000; SameSite=Lax';
+                  document.cookie = 'lembragua_theme=' + scheme + cookieAttrs;
                   document.documentElement.classList.toggle('dark', isDark);
                   document.documentElement.style.colorScheme = scheme;
                   document.documentElement.style.backgroundColor = barColor;
@@ -75,12 +98,19 @@ export default function RootLayout({
                     document.head.appendChild(m);
                   }
                   var cs = document.querySelector('meta[name="color-scheme"]');
-                  if (cs) cs.setAttribute('content', scheme);
+                  if (cs) {
+                    cs.setAttribute('content', scheme);
+                  } else {
+                    var csm = document.createElement('meta');
+                    csm.setAttribute('name', 'color-scheme');
+                    csm.setAttribute('content', scheme);
+                    document.head.appendChild(csm);
+                  }
                   var msNav = document.querySelector('meta[name="msapplication-navbutton-color"]');
-                  if (msNav) msNav.setAttribute('content', '#1e3a8a');
+                  if (msNav) msNav.setAttribute('content', barColor);
                   var manifestLink = document.querySelector('link[rel="manifest"]');
                   if (manifestLink) {
-                    manifestLink.setAttribute('href', isDark ? '/manifest-dark.json' : '/manifest.webmanifest');
+                    manifestLink.setAttribute('href', '/manifest.webmanifest?theme=' + scheme);
                   }
                 } catch (e) {}
               })();
@@ -88,7 +118,10 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="bg-[#ffffff] dark:bg-[#0f172a] text-slate-800 antialiased min-h-dvh selection:bg-sky-200" suppressHydrationWarning>
+      <body
+        className={`${isServerDark ? 'dark ' : ''}bg-[#ffffff] dark:bg-[#0f172a] text-slate-800 dark:text-slate-100 antialiased min-h-dvh selection:bg-sky-200`}
+        suppressHydrationWarning
+      >
         {children}
         <script
           dangerouslySetInnerHTML={{

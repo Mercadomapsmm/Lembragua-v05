@@ -285,7 +285,7 @@ export default function Page() {
           <div className="w-12 h-12 rounded-2xl bg-sky-100 dark:bg-sky-950 flex items-center justify-center animate-spin text-sky-600 dark:text-sky-400">
             💧
           </div>
-          <p className="text-sm font-bold text-slate-600 dark:text-slate-300">Carregando Lembragua.online...</p>
+          <p className="text-sm font-bold text-slate-600 dark:text-slate-300">Carregando Lembragua...</p>
         </div>
       </div>
     );
@@ -350,7 +350,7 @@ export default function Page() {
               Aplicativo Fechado
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-              Lembragua.online foi encerrado com sucesso. Seus dados de água e remédios continuam 100% salvos no seu aparelho.
+              Lembragua foi encerrado com sucesso. Seus dados de água e remédios continuam 100% salvos no seu aparelho.
             </p>
           </div>
           <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 text-xs text-slate-600 dark:text-slate-300 font-semibold">
@@ -363,7 +363,7 @@ export default function Page() {
               className="w-full py-3 px-4 rounded-2xl bg-sky-500 hover:bg-sky-600 active:bg-sky-700 text-white font-black text-sm shadow-md transition active:scale-95 cursor-pointer flex items-center justify-center gap-2"
             >
               <RotateCcw className="w-4 h-4" />
-              <span>Reabrir Lembragua.online</span>
+              <span>Reabrir Lembragua</span>
             </button>
           </div>
         </div>

@@ -91,7 +91,7 @@ export function InstallAppModal({ isOpen, onClose }: InstallAppModalProps) {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <h4 className="font-black text-slate-900 dark:text-white text-base truncate">
-                  Lembragua.online
+                  Lembragua
                 </h4>
                 <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-sky-100 dark:bg-sky-950 text-sky-800 dark:text-sky-300">
                   Ícone Oficial
@@ -135,7 +135,7 @@ export function InstallAppModal({ isOpen, onClose }: InstallAppModalProps) {
               <div>
                 <p className="font-black text-sm">Aplicativo Já Instalado!</p>
                 <p className="text-[11px] font-normal text-emerald-700 dark:text-emerald-300 mt-0.5">
-                  Identificamos que o Lembragua.online já está instalado no seu aparelho com o ícone oficial. Os avisos de download foram ocultados.
+                  Identificamos que o Lembragua já está instalado no seu aparelho com o ícone oficial. Os avisos de download foram ocultados.
                 </p>
               </div>
             </div>
@@ -212,7 +212,7 @@ export function InstallAppModal({ isOpen, onClose }: InstallAppModalProps) {
                 <ol className="space-y-1.5 text-slate-600 dark:text-slate-300 list-decimal list-inside pl-1 font-medium">
                   <li>Toque nos <strong>três pontinhos (⋮)</strong> no canto superior direito do navegador.</li>
                   <li>Procure e toque em <strong>&quot;Instalar aplicativo&quot;</strong> ou <strong>&quot;Adicionar à tela inicial&quot;</strong>.</li>
-                  <li>Confirme o nome <strong>Lembragua.online</strong>.</li>
+                  <li>Confirme o nome <strong>Lembragua</strong>.</li>
                   <li>Pronto! O app aparecerá na gaveta e na tela inicial do seu celular com seu ícone próprio.</li>
                 </ol>
               </div>
@@ -228,7 +228,7 @@ export function InstallAppModal({ isOpen, onClose }: InstallAppModalProps) {
                 <ol className="space-y-1.5 text-slate-600 dark:text-slate-300 list-decimal list-inside pl-1 font-medium">
                   <li>No Safari, toque no botão <strong>Compartilhar</strong> (o quadrado com uma seta para cima na barra inferior).</li>
                   <li>Role a lista de opções para baixo e toque em <strong>&quot;Adicionar à Tela de Início&quot;</strong>.</li>
-                  <li>Verifique o ícone do <strong>Lembragua.online</strong> e toque em <strong>Adicionar</strong> no canto superior direito.</li>
+                  <li>Verifique o ícone do <strong>Lembragua</strong> e toque em <strong>Adicionar</strong> no canto superior direito.</li>
                   <li>O app abrirá em tela cheia como um aplicativo nativo da Apple!</li>
                 </ol>
               </div>
@@ -243,7 +243,7 @@ export function InstallAppModal({ isOpen, onClose }: InstallAppModalProps) {
                 </div>
                 <ol className="space-y-1.5 text-slate-600 dark:text-slate-300 list-decimal list-inside pl-1 font-medium">
                   <li>Olhe na <strong>barra de endereços</strong> do navegador (à direita, onde fica a estrela de favoritos).</li>
-                  <li>Clique no ícone de <strong>computador com seta para baixo</strong> ou <strong>&quot;Instalar Lembragua.online&quot;</strong>.</li>
+                  <li>Clique no ícone de <strong>computador com seta para baixo</strong> ou <strong>&quot;Instalar Lembragua&quot;</strong>.</li>
                   <li>O aplicativo será aberto em uma janela dedicada e criará um atalho com seu ícone na área de trabalho.</li>
                 </ol>
               </div>
@@ -254,7 +254,7 @@ export function InstallAppModal({ isOpen, onClose }: InstallAppModalProps) {
         {/* Modal Footer */}
         <div className="p-4 bg-slate-50 dark:bg-slate-850 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
           <span className="text-[11px] text-slate-500 dark:text-slate-400">
-            Lembragua.online • 100% Offline
+            Lembragua • 100% Offline
           </span>
           <button
             type="button"

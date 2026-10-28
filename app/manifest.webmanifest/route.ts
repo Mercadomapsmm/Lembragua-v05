@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
 
   const manifest = {
     id: '/',
-    name: 'Lembragua.online - Água e Remédios',
+    name: 'Lembragua - Água e Remédios',
     short_name: 'Lembragua',
     description:
       'Aplicativo leve para cuidar de hábitos essenciais: beber água e tomar remédios. 100% offline, fácil e sem cadastro.',

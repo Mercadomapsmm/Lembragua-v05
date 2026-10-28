@@ -46,7 +46,7 @@ export function Header({
       case 'evolution':
         return { title: 'Tela da Evolução', subtitle: 'Metas e Histórico dos 7 Dias', icon: '📈' };
       default:
-        return { title: 'Lembragua.online', subtitle: 'Cuidado diário sem complicação', icon: null };
+        return { title: 'Lembragua', subtitle: 'Cuidado diário sem complicação', icon: null };
     }
   };
 
@@ -80,7 +80,7 @@ export function Header({
               <Logo className="w-8 h-8 sm:w-10 sm:h-10 shrink-0" />
               <div className="min-w-0">
                 <h1 className="text-base sm:text-xl font-bold tracking-tight text-slate-900 dark:text-white leading-none truncate">
-                  Lembragua.online
+                  Lembragua
                 </h1>
                 <p className="text-[10px] sm:text-xs font-medium text-slate-500 dark:text-slate-400 mt-0.5 truncate">
                   Leve • Sem cadastro • 100% Offline

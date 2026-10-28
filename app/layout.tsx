@@ -18,12 +18,12 @@ export async function generateViewport(): Promise<Viewport> {
 }
 
 export const metadata: Metadata = {
-  title: 'Lembragua.online - Água e Remédios',
+  title: 'Lembragua - Água e Remédios',
   description: 'Aplicativo leve para cuidar de hábitos essenciais: beber água e tomar remédios. 100% offline, fácil e sem cadastro.',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Lembragua.online',
+    title: 'Lembragua',
   },
   icons: {
     icon: [
@@ -36,13 +36,13 @@ export const metadata: Metadata = {
   },
   manifest: '/manifest.webmanifest',
   openGraph: {
-    title: 'Lembragua.online - Água e Remédios',
+    title: 'Lembragua - Água e Remédios',
     description: 'Aplicativo leve para manter hábitos essenciais: beber água e tomar remédios.',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Lembragua.online - Água e Remédios',
+    title: 'Lembragua - Água e Remédios',
     description: 'Aplicativo leve para manter hábitos essenciais: beber água e tomar remédios.',
   },
 };

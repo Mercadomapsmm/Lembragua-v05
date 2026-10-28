@@ -31,7 +31,7 @@ export function AboutModal({
         <Logo className="w-16 h-16 mx-auto" />
         <div>
           <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-            Lembragua.online
+            Lembragua
           </h2>
           <div className="inline-flex items-center gap-1.5 px-3 py-1 mt-1 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
             <ShieldCheck className="w-3.5 h-3.5" />

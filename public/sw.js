@@ -1,5 +1,5 @@
-// Lembragua.online Service Worker
-const CACHE_NAME = 'lembragua-pwa-v11';
+// Lembragua Service Worker
+const CACHE_NAME = 'lembragua-pwa-v12';
 const ASSETS_TO_CACHE = [
   '/',
   '/icon.svg',

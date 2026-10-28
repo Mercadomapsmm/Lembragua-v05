@@ -54,21 +54,38 @@ export default function Page() {
     };
   }, []);
 
-  // Synchronize document dark class, color-scheme, and status bar color to match navbar
+  // Synchronize document dark class, color-scheme, status bar, and navigation bar colors
   useEffect(() => {
     if (typeof document !== 'undefined') {
       const isDark = data?.settings?.theme === 'dark';
+      const systemBarColor = isDark ? '#0f172a' : '#ffffff';
+
       document.documentElement.classList.toggle('dark', isDark);
       document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
+      document.documentElement.style.backgroundColor = systemBarColor;
+      if (document.body) {
+        document.body.style.backgroundColor = systemBarColor;
+      }
 
-      const navColor = isDark ? '#0f172a' : '#ffffff';
-      let metaThemeColor = document.querySelector('meta[name="theme-color"]:not([media])');
-      if (!metaThemeColor) {
-        metaThemeColor = document.createElement('meta');
+      const existingThemeMetas = document.querySelectorAll('meta[name="theme-color"]');
+      if (existingThemeMetas.length > 0) {
+        existingThemeMetas.forEach((meta) => {
+          meta.setAttribute('content', systemBarColor);
+        });
+      } else {
+        const metaThemeColor = document.createElement('meta');
         metaThemeColor.setAttribute('name', 'theme-color');
+        metaThemeColor.setAttribute('content', systemBarColor);
         document.head.appendChild(metaThemeColor);
       }
-      metaThemeColor.setAttribute('content', navColor);
+
+      let msNavMeta = document.querySelector('meta[name="msapplication-navbutton-color"]');
+      if (!msNavMeta) {
+        msNavMeta = document.createElement('meta');
+        msNavMeta.setAttribute('name', 'msapplication-navbutton-color');
+        document.head.appendChild(msNavMeta);
+      }
+      msNavMeta.setAttribute('content', systemBarColor);
     }
   }, [data?.settings?.theme]);
 
@@ -330,7 +347,7 @@ export default function Page() {
 
       {/* Offline Toast Indicator */}
       {!isOnline && (
-        <div className="fixed bottom-20 left-4 z-50 flex items-center gap-2 rounded-xl bg-slate-800 text-white px-3.5 py-2 text-xs font-bold shadow-lg border border-slate-700">
+        <div className="fixed bottom-34 left-4 z-50 flex items-center gap-2 rounded-xl bg-slate-800 text-white px-3.5 py-2 text-xs font-bold shadow-lg border border-slate-700">
           <WifiOff className="w-4 h-4 text-amber-400" />
           <span>Modo Offline: tudo salvo no aparelho.</span>
         </div>
@@ -391,9 +408,10 @@ export default function Page() {
         </AnimatePresence>
       </main>
 
-      {/* Sticky Bottom Quick Navigation Bar (always 1 tap away) */}
-      <nav className="sticky bottom-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200/80 dark:border-slate-800 shadow-md transition-colors safe-pb">
-        <div className="max-w-md sm:max-w-lg lg:max-w-xl mx-auto px-2 sm:px-4 py-1.5 sm:py-2 flex items-center justify-around gap-1 sm:gap-2">
+      {/* Sticky Bottom Quick Navigation Bar positioned one slot higher, matching status bar color */}
+      <div className="sticky bottom-0 z-40 pb-[calc(3.5rem+env(safe-area-inset-bottom,0px))] bg-white dark:bg-slate-900 border-t border-slate-200/80 dark:border-slate-800 shadow-md transition-colors">
+        <nav className="bg-white dark:bg-slate-900 transition-colors">
+          <div className="max-w-md sm:max-w-lg lg:max-w-xl mx-auto px-2 sm:px-4 py-1.5 sm:py-2 flex items-center justify-around gap-1 sm:gap-2">
           {/* Home */}
           <button
             type="button"
@@ -463,8 +481,9 @@ export default function Page() {
             <span className="text-lg sm:text-xl leading-none">⚙️</span>
             <span className="text-[10px] sm:text-xs font-bold truncate mt-0.5">Sobre</span>
           </button>
-        </div>
-      </nav>
+          </div>
+        </nav>
+      </div>
     </div>
   );
 }

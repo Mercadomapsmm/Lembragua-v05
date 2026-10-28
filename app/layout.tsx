@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     ],
     shortcut: '/icon.svg',
     apple: [
-      { url: '/icon.svg' },
+      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
     ],
   },
   manifest: '/manifest.webmanifest',
@@ -48,12 +48,32 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="pt-BR" suppressHydrationWarning>
+    <html lang="pt-BR" className="bg-white dark:bg-slate-900" suppressHydrationWarning>
       <head>
         <link rel="icon" href="/icon.svg" type="image/svg+xml" />
-        <link rel="apple-touch-icon" href="/icon.svg" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var raw = localStorage.getItem('habitos_simples_v1');
+                  var isDark = raw && JSON.parse(raw)?.settings?.theme === 'dark';
+                  var barColor = isDark ? '#0f172a' : '#ffffff';
+                  document.documentElement.classList.toggle('dark', !!isDark);
+                  document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
+                  document.documentElement.style.backgroundColor = barColor;
+                  var metas = document.querySelectorAll('meta[name="theme-color"]');
+                  for (var i = 0; i < metas.length; i++) {
+                    metas[i].setAttribute('content', barColor);
+                  }
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
       </head>
-      <body className="bg-slate-50 text-slate-800 antialiased min-h-screen selection:bg-sky-200" suppressHydrationWarning>
+      <body className="bg-white dark:bg-slate-900 text-slate-800 antialiased min-h-screen selection:bg-sky-200" suppressHydrationWarning>
         {children}
         <script
           dangerouslySetInnerHTML={{

@@ -11,10 +11,16 @@ html {
 }
 
 html, body {
-  overflow-x: hidden;
+  overflow-x: clip;
   max-width: 100vw;
   width: 100%;
   min-height: 100dvh;
+  background-color: #ffffff;
+}
+
+html.dark,
+html.dark body {
+  background-color: #0f172a;
 }
 
 body {

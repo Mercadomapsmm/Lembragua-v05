@@ -54,7 +54,7 @@ export default function Page() {
     };
   }, []);
 
-  // Synchronize document dark class, color-scheme, status bar, and navigation bar colors
+  // Synchronize document dark class, color-scheme, status bar, and system navigation bar colors
   useEffect(() => {
     if (typeof document !== 'undefined') {
       const isDark = data?.settings?.theme === 'dark';
@@ -67,10 +67,16 @@ export default function Page() {
         document.body.style.backgroundColor = systemBarColor;
       }
 
+      // Remove media attributes so OS prefers-color-scheme never overrides in-app theme
       const existingThemeMetas = document.querySelectorAll('meta[name="theme-color"]');
       if (existingThemeMetas.length > 0) {
-        existingThemeMetas.forEach((meta) => {
-          meta.setAttribute('content', systemBarColor);
+        existingThemeMetas.forEach((meta, idx) => {
+          if (idx === 0) {
+            meta.removeAttribute('media');
+            meta.setAttribute('content', systemBarColor);
+          } else {
+            meta.remove();
+          }
         });
       } else {
         const metaThemeColor = document.createElement('meta');
@@ -86,6 +92,29 @@ export default function Page() {
         document.head.appendChild(msNavMeta);
       }
       msNavMeta.setAttribute('content', systemBarColor);
+
+      const manifestLink = document.querySelector('link[rel="manifest"]');
+      if (manifestLink) {
+        manifestLink.setAttribute('href', isDark ? '/manifest-dark.json' : '/manifest.webmanifest');
+      }
+
+      // Optional native Android WebView / wrapper bridges if running inside an APK shell
+      try {
+        const win = window as unknown as {
+          NavigationBar?: { backgroundColorByHexString?: (hex: string, light?: boolean) => void };
+          StatusBar?: { backgroundColorByHexString?: (hex: string) => void };
+          Android?: {
+            setNavigationBarColor?: (hex: string) => void;
+            setStatusBarColor?: (hex: string) => void;
+          };
+        };
+        win.NavigationBar?.backgroundColorByHexString?.(systemBarColor, !isDark);
+        win.StatusBar?.backgroundColorByHexString?.(systemBarColor);
+        win.Android?.setNavigationBarColor?.(systemBarColor);
+        win.Android?.setStatusBarColor?.(systemBarColor);
+      } catch {
+        // Ignore when running in standard browser/PWA
+      }
     }
   }, [data?.settings?.theme]);
 
@@ -360,7 +389,7 @@ export default function Page() {
       />
 
       {/* Main Content Area with Smooth Page Transitions */}
-      <main className="flex-1 max-w-4xl xl:max-w-5xl w-full mx-auto px-3 sm:px-5 md:px-6 py-3 sm:py-6 overflow-x-hidden">
+      <main className="flex-1 max-w-4xl xl:max-w-5xl w-full mx-auto px-3 sm:px-5 md:px-6 pt-3 sm:pt-6 pb-[calc(7.5rem+env(safe-area-inset-bottom,0px))] overflow-x-clip">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentTab}
@@ -408,9 +437,9 @@ export default function Page() {
         </AnimatePresence>
       </main>
 
-      {/* Sticky Bottom Quick Navigation Bar positioned one slot higher, matching status bar color */}
-      <div className="sticky bottom-0 z-40 pb-[calc(3.5rem+env(safe-area-inset-bottom,0px))] bg-white dark:bg-slate-900 border-t border-slate-200/80 dark:border-slate-800 shadow-md transition-colors">
-        <nav className="bg-white dark:bg-slate-900 transition-colors">
+      {/* Fixed Bottom Quick Navigation Bar positioned one slot higher, matching status bar color */}
+      <div className="fixed bottom-0 left-0 right-0 w-full z-40 pb-[calc(3.5rem+env(safe-area-inset-bottom,0px))] bg-[#ffffff] dark:bg-[#0f172a] shadow-[0_80px_0_80px_#ffffff] dark:shadow-[0_80px_0_80px_#0f172a] border-t border-slate-200/80 dark:border-slate-800 transition-colors">
+        <nav className="bg-[#ffffff] dark:bg-[#0f172a] transition-colors">
           <div className="max-w-md sm:max-w-lg lg:max-w-xl mx-auto px-2 sm:px-4 py-1.5 sm:py-2 flex items-center justify-around gap-1 sm:gap-2">
           {/* Home */}
           <button

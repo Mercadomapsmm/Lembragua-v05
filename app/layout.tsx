@@ -2,10 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
-    { media: '(prefers-color-scheme: dark)', color: '#0f172a' },
-  ],
+  themeColor: '#ffffff',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
@@ -48,7 +45,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="pt-BR" className="bg-white dark:bg-slate-900" suppressHydrationWarning>
+    <html lang="pt-BR" className="bg-[#ffffff] dark:bg-[#0f172a]" suppressHydrationWarning>
       <head>
         <link rel="icon" href="/icon.svg" type="image/svg+xml" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -65,6 +62,7 @@ export default function RootLayout({
                   document.documentElement.style.backgroundColor = barColor;
                   var metas = document.querySelectorAll('meta[name="theme-color"]');
                   for (var i = 0; i < metas.length; i++) {
+                    metas[i].removeAttribute('media');
                     metas[i].setAttribute('content', barColor);
                   }
                 } catch (e) {}
@@ -73,14 +71,23 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="bg-white dark:bg-slate-900 text-slate-800 antialiased min-h-screen selection:bg-sky-200" suppressHydrationWarning>
+      <body className="bg-[#ffffff] dark:bg-[#0f172a] text-slate-800 antialiased min-h-screen selection:bg-sky-200" suppressHydrationWarning>
         {children}
         <script
           dangerouslySetInnerHTML={{
             __html: `
               if ('serviceWorker' in navigator) {
                 window.addEventListener('load', function() {
-                  navigator.serviceWorker.register('/sw.js').catch(function(err) {
+                  var refreshing = false;
+                  navigator.serviceWorker.addEventListener('controllerchange', function() {
+                    if (!refreshing) {
+                      refreshing = true;
+                      window.location.reload();
+                    }
+                  });
+                  navigator.serviceWorker.register('/sw.js').then(function(reg) {
+                    reg.update().catch(function() {});
+                  }).catch(function(err) {
                     console.log('SW registration skipped:', err);
                   });
                 });

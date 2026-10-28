@@ -53,7 +53,7 @@ export function Header({
   const tabInfo = getTabTitle();
 
   return (
-    <header className="sticky top-0 z-40 bg-white dark:bg-slate-900 border-b border-slate-200/80 dark:border-slate-800 shadow-xs transition-colors">
+    <header className="sticky top-0 z-40 bg-[#ffffff] dark:bg-[#0f172a] border-b border-slate-200/80 dark:border-slate-800 shadow-xs transition-colors">
       <div className="max-w-4xl xl:max-w-5xl mx-auto px-3 sm:px-5 md:px-6 py-2 sm:py-3 flex items-center justify-between gap-2 sm:gap-3">
         {/* Left: Back button or Logo */}
         <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 sm:flex-initial">

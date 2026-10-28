@@ -12,6 +12,13 @@ export default function manifest(): MetadataRoute.Manifest {
     background_color: '#ffffff',
     theme_color: '#ffffff',
     orientation: 'portrait',
+    ...({
+      themeColorDark: '#0f172a',
+      navigationColor: '#ffffff',
+      navigationColorDark: '#0f172a',
+      navigationDividerColor: '#ffffff',
+      navigationDividerColorDark: '#0f172a',
+    } as Record<string, string>),
     icons: [
       {
         src: '/icon-192.png',

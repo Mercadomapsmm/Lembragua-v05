@@ -16,11 +16,13 @@ html, body {
   width: 100%;
   min-height: 100dvh;
   background-color: #ffffff;
+  color-scheme: light;
 }
 
 html.dark,
 html.dark body {
   background-color: #0f172a;
+  color-scheme: dark;
 }
 
 body {

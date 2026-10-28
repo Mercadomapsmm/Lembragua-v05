@@ -1,5 +1,5 @@
 // Lembragua.online Service Worker
-const CACHE_NAME = 'lembragua-pwa-v6';
+const CACHE_NAME = 'lembragua-pwa-v7';
 const ASSETS_TO_CACHE = [
   '/',
   '/icon.svg',
@@ -42,7 +42,7 @@ self.addEventListener('fetch', (event) => {
 
   if (isNavigationOrManifest) {
     event.respondWith(
-      fetch(event.request)
+      fetch(event.request, { cache: 'no-cache' })
         .then((networkResponse) => {
           if (networkResponse && networkResponse.status === 200) {
             const responseToCache = networkResponse.clone();

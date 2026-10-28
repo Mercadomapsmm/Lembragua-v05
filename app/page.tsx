@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { HabitTab, WaterState, MedicineState, AppData } from '@/lib/types';
-import { useAppData, getTodayString } from '@/lib/storage';
+import { useAppData, loadAppData, getTodayString } from '@/lib/storage';
 import {
   checkActiveAlerts,
   ActiveAlert,
@@ -57,17 +57,21 @@ export default function Page() {
   // Synchronize document dark class, color-scheme, status bar, and system navigation bar colors
   useEffect(() => {
     if (typeof document !== 'undefined') {
-      const isDark = data?.settings?.theme === 'dark';
+      const persistedTheme = loadAppData()?.settings?.theme;
+      const activeTheme = data?.settings?.theme ?? persistedTheme ?? 'light';
+      const isDark = activeTheme === 'dark';
       const systemBarColor = isDark ? '#0f172a' : '#ffffff';
+      const scheme = isDark ? 'dark' : 'light';
 
       document.documentElement.classList.toggle('dark', isDark);
-      document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
+      document.documentElement.style.colorScheme = scheme;
       document.documentElement.style.backgroundColor = systemBarColor;
       if (document.body) {
+        document.body.style.colorScheme = scheme;
         document.body.style.backgroundColor = systemBarColor;
       }
 
-      // Remove media attributes so OS prefers-color-scheme never overrides in-app theme
+      // Keep single <meta name="theme-color"> without media queries so status & nav bars match in-app theme
       const existingThemeMetas = document.querySelectorAll('meta[name="theme-color"]');
       if (existingThemeMetas.length > 0) {
         existingThemeMetas.forEach((meta, idx) => {
@@ -85,6 +89,14 @@ export default function Page() {
         document.head.appendChild(metaThemeColor);
       }
 
+      let colorSchemeMeta = document.querySelector('meta[name="color-scheme"]');
+      if (!colorSchemeMeta) {
+        colorSchemeMeta = document.createElement('meta');
+        colorSchemeMeta.setAttribute('name', 'color-scheme');
+        document.head.appendChild(colorSchemeMeta);
+      }
+      colorSchemeMeta.setAttribute('content', scheme);
+
       let msNavMeta = document.querySelector('meta[name="msapplication-navbutton-color"]');
       if (!msNavMeta) {
         msNavMeta = document.createElement('meta');
@@ -98,7 +110,7 @@ export default function Page() {
         manifestLink.setAttribute('href', isDark ? '/manifest-dark.json' : '/manifest.webmanifest');
       }
 
-      // Optional native Android WebView / wrapper bridges if running inside an APK shell
+      // Optional native Android WebView / APK wrapper bridges
       try {
         const win = window as unknown as {
           NavigationBar?: { backgroundColorByHexString?: (hex: string, light?: boolean) => void };
@@ -106,12 +118,18 @@ export default function Page() {
           Android?: {
             setNavigationBarColor?: (hex: string) => void;
             setStatusBarColor?: (hex: string) => void;
+            setSystemBarsColor?: (hex: string) => void;
           };
+          ReactNativeWebView?: { postMessage?: (msg: string) => void };
         };
         win.NavigationBar?.backgroundColorByHexString?.(systemBarColor, !isDark);
         win.StatusBar?.backgroundColorByHexString?.(systemBarColor);
         win.Android?.setNavigationBarColor?.(systemBarColor);
         win.Android?.setStatusBarColor?.(systemBarColor);
+        win.Android?.setSystemBarsColor?.(systemBarColor);
+        win.ReactNativeWebView?.postMessage?.(
+          JSON.stringify({ type: 'SYSTEM_BARS_COLOR', color: systemBarColor, dark: isDark })
+        );
       } catch {
         // Ignore when running in standard browser/PWA
       }
@@ -255,12 +273,12 @@ export default function Page() {
 
   if (!data) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-dvh flex items-center justify-center bg-[#ffffff] dark:bg-[#0f172a]">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-sky-100 flex items-center justify-center animate-spin text-sky-600">
+          <div className="w-12 h-12 rounded-2xl bg-sky-100 dark:bg-sky-950 flex items-center justify-center animate-spin text-sky-600 dark:text-sky-400">
             💧
           </div>
-          <p className="text-sm font-bold text-slate-600">Carregando Lembragua.online...</p>
+          <p className="text-sm font-bold text-slate-600 dark:text-slate-300">Carregando Lembragua.online...</p>
         </div>
       </div>
     );
@@ -314,8 +332,8 @@ export default function Page() {
       <div
         className={
           theme === 'dark'
-            ? 'dark min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4 selection:bg-sky-500/30'
-            : 'min-h-screen bg-slate-50 text-slate-800 flex items-center justify-center p-4 selection:bg-sky-200'
+            ? 'dark min-h-dvh bg-[#0f172a] text-slate-100 flex items-center justify-center p-4 selection:bg-sky-500/30'
+            : 'min-h-dvh bg-[#ffffff] text-slate-800 flex items-center justify-center p-4 selection:bg-sky-200'
         }
       >
         <div className="max-w-md w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 text-center shadow-xl animate-fade-in space-y-4">
@@ -352,8 +370,8 @@ export default function Page() {
     <div
       className={
         theme === 'dark'
-          ? 'dark min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-sky-500/30 transition-colors'
-          : 'min-h-screen bg-slate-50/50 text-slate-800 flex flex-col selection:bg-sky-200 transition-colors'
+          ? 'dark min-h-dvh bg-[#0f172a] text-slate-100 flex flex-col selection:bg-sky-500/30'
+          : 'min-h-dvh bg-[#ffffff] text-slate-800 flex flex-col selection:bg-sky-200'
       }
     >
       {/* Top Header with Close App button */}
@@ -389,58 +407,59 @@ export default function Page() {
       />
 
       {/* Main Content Area with Smooth Page Transitions */}
-      <main className="flex-1 max-w-4xl xl:max-w-5xl w-full mx-auto px-3 sm:px-5 md:px-6 pt-3 sm:pt-6 pb-[calc(7.5rem+env(safe-area-inset-bottom,0px))] overflow-x-clip">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentTab}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.18, ease: 'easeOut' }}
-          >
-            {currentTab === 'home' && (
-              <HomeScreen
-                data={data}
-                onSelectTab={(tab) => setCurrentTab(tab)}
-                onQuickDrinkWater={handleQuickDrinkWater}
-                onOpenInstall={() => setIsInstallModalOpen(true)}
-                isInstalled={isInstalled}
-              />
-            )}
-            {currentTab === 'water' && (
-              <WaterHabit waterState={data.water} onUpdate={updateWater} />
-            )}
-            {currentTab === 'medicine' && (
-              <MedicineHabit
-                medicineState={data.medicine}
-                onUpdate={updateMedicine}
-              />
-            )}
-            {currentTab === 'evolution' && (
-              <EvolutionScreen
-                data={data}
-                onUpdateWater={updateWater}
-                onUpdateMedicine={updateMedicine}
-              />
-            )}
-            {currentTab === 'about' && (
-              <AboutModal
-                appData={data}
-                onRestoreData={restoreAllData}
-                onClose={() => setCurrentTab('home')}
-                onSetTheme={handleSetTheme}
-                onOpenInstall={() => setIsInstallModalOpen(true)}
-                isInstalled={isInstalled}
-              />
-            )}
-          </motion.div>
-        </AnimatePresence>
-      </main>
+      <div className="flex-1 w-full bg-slate-50/60 dark:bg-slate-950 pb-[calc(118px+env(safe-area-inset-bottom,0px))]">
+        <main className="max-w-4xl xl:max-w-5xl w-full mx-auto px-3 sm:px-5 md:px-6 pt-3 sm:pt-6 pb-4 overflow-x-clip">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentTab}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.18, ease: 'easeOut' }}
+            >
+              {currentTab === 'home' && (
+                <HomeScreen
+                  data={data}
+                  onSelectTab={(tab) => setCurrentTab(tab)}
+                  onQuickDrinkWater={handleQuickDrinkWater}
+                  onOpenInstall={() => setIsInstallModalOpen(true)}
+                  isInstalled={isInstalled}
+                />
+              )}
+              {currentTab === 'water' && (
+                <WaterHabit waterState={data.water} onUpdate={updateWater} />
+              )}
+              {currentTab === 'medicine' && (
+                <MedicineHabit
+                  medicineState={data.medicine}
+                  onUpdate={updateMedicine}
+                />
+              )}
+              {currentTab === 'evolution' && (
+                <EvolutionScreen
+                  data={data}
+                  onUpdateWater={updateWater}
+                  onUpdateMedicine={updateMedicine}
+                />
+              )}
+              {currentTab === 'about' && (
+                <AboutModal
+                  appData={data}
+                  onRestoreData={restoreAllData}
+                  onClose={() => setCurrentTab('home')}
+                  onSetTheme={handleSetTheme}
+                  onOpenInstall={() => setIsInstallModalOpen(true)}
+                  isInstalled={isInstalled}
+                />
+              )}
+            </motion.div>
+          </AnimatePresence>
+        </main>
+      </div>
 
-      {/* Fixed Bottom Quick Navigation Bar positioned one slot higher, matching status bar color */}
-      <div className="fixed bottom-0 left-0 right-0 w-full z-40 pb-[calc(3.5rem+env(safe-area-inset-bottom,0px))] bg-[#ffffff] dark:bg-[#0f172a] shadow-[0_80px_0_80px_#ffffff] dark:shadow-[0_80px_0_80px_#0f172a] border-t border-slate-200/80 dark:border-slate-800 transition-colors">
-        <nav className="bg-[#ffffff] dark:bg-[#0f172a] transition-colors">
-          <div className="max-w-md sm:max-w-lg lg:max-w-xl mx-auto px-2 sm:px-4 py-1.5 sm:py-2 flex items-center justify-around gap-1 sm:gap-2">
+      {/* Elevated Quick Navigation Bar (one position above bottom) */}
+      <nav className="fixed bottom-[calc(56px+env(safe-area-inset-bottom,0px))] left-0 right-0 w-full z-40 bg-[#ffffff] dark:bg-[#0f172a] shadow-[0_2px_0_0_#ffffff] dark:shadow-[0_2px_0_0_#0f172a] border-t border-slate-200/80 dark:border-slate-800">
+        <div className="max-w-md sm:max-w-lg lg:max-w-xl mx-auto px-2 sm:px-4 py-1.5 sm:py-2 flex items-center justify-around gap-1 sm:gap-2">
           {/* Home */}
           <button
             type="button"
@@ -510,9 +529,14 @@ export default function Page() {
             <span className="text-lg sm:text-xl leading-none">⚙️</span>
             <span className="text-[10px] sm:text-xs font-bold truncate mt-0.5">Sobre</span>
           </button>
-          </div>
-        </nav>
-      </div>
+        </div>
+      </nav>
+
+      {/* Dedicated 56px bottom-0 bar so mobile system navigation bar / chin matches status bar color */}
+      <div
+        aria-hidden="true"
+        className="fixed bottom-0 left-0 right-0 w-full h-[calc(56px+env(safe-area-inset-bottom,0px))] z-40 bg-[#ffffff] dark:bg-[#0f172a] pointer-events-none"
+      />
     </div>
   );
 }

@@ -2,7 +2,6 @@
 
 import { ArrowLeft, Bell, BellOff, Sun, Moon, Power } from 'lucide-react';
 import { HabitTab } from '@/lib/types';
-import { requestNotificationPermission } from '@/lib/notifications';
 import { Logo } from '@/components/Logo';
 
 interface HeaderProps {
@@ -24,17 +23,8 @@ export function Header({
   onToggleTheme,
   onCloseApp,
 }: HeaderProps) {
-  const handleNotificationClick = async () => {
-    if (!notificationsEnabled) {
-      const granted = await requestNotificationPermission();
-      if (granted) {
-        onToggleNotifications();
-      } else {
-        onToggleNotifications();
-      }
-    } else {
-      onToggleNotifications();
-    }
+  const handleNotificationClick = () => {
+    onToggleNotifications();
   };
 
   const getTabTitle = () => {
@@ -138,8 +128,12 @@ export function Header({
                 ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100'
                 : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-100'
             }`}
-            title={notificationsEnabled ? 'Notificações ativadas' : 'Ativar notificações'}
-            aria-label="Controle de notificações"
+            title={
+              notificationsEnabled
+                ? 'Alarmes com app off ativados (toque para pausar)'
+                : 'Ativar alarmes e avisos mesmo com o app off'
+            }
+            aria-label="Controle de notificações em segundo plano"
           >
             {notificationsEnabled ? (
               <Bell className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600 fill-emerald-100 dark:fill-emerald-950" />

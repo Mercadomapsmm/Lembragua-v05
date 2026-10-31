@@ -9,6 +9,8 @@ import {
   CheckCircle2,
   ChevronRight,
   Plus,
+  BellRing,
+  Sparkles,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { sounds, triggerVibration } from '@/lib/sound';
@@ -19,12 +21,20 @@ interface HomeScreenProps {
   onQuickDrinkWater: (amountMl: number) => void;
   onOpenInstall?: () => void;
   isInstalled?: boolean;
+  notificationsEnabled?: boolean;
+  onEnableBackgroundAlarms?: () => void;
+  onTestBackgroundAlarm?: () => void;
+  testAlarmCountdown?: number | null;
 }
 
 export function HomeScreen({
   data,
   onSelectTab,
   onQuickDrinkWater,
+  notificationsEnabled = false,
+  onEnableBackgroundAlarms,
+  onTestBackgroundAlarm,
+  testAlarmCountdown = null,
 }: HomeScreenProps) {
   const todayStr = getTodayString();
 
@@ -74,7 +84,70 @@ export function HomeScreen({
   };
 
   return (
-    <div className="space-y-5 sm:space-y-6 pb-12 animate-fade-in">
+    <div className="space-y-4 sm:space-y-5 pb-12 animate-fade-in">
+      {/* Background / Closed-App Alarm Status & Quick Test */}
+      {testAlarmCountdown !== null ? (
+        <div className="p-3.5 sm:p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/60 border-2 border-amber-300 dark:border-amber-700 flex items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-amber-400 text-slate-900 flex items-center justify-center font-black text-sm shrink-0 animate-pulse">
+              {testAlarmCountdown}s
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs sm:text-sm font-black text-amber-950 dark:text-amber-200 leading-tight">
+                Minimize ou feche o app agora!
+              </p>
+              <p className="text-[11px] sm:text-xs font-medium text-amber-800 dark:text-amber-300/90 mt-0.5">
+                O aviso de teste vai tocar em {testAlarmCountdown} segundo(s) com o app off.
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : !notificationsEnabled ? (
+        <div className="p-3.5 sm:p-4 rounded-2xl bg-sky-50/90 dark:bg-slate-900 border-2 border-sky-200 dark:border-sky-800/80 flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap shadow-xs">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-sky-500 text-white flex items-center justify-center shrink-0 shadow-xs">
+              <BellRing className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white leading-tight">
+                Ativar Alarmes com o App Off
+              </h2>
+              <p className="text-[11px] sm:text-xs text-slate-600 dark:text-slate-300 mt-0.5 leading-snug">
+                Receba os avisos de água e remédios mesmo com o app fechado ou tela bloqueada.
+              </p>
+            </div>
+          </div>
+          {onEnableBackgroundAlarms && (
+            <button
+              type="button"
+              onClick={onEnableBackgroundAlarms}
+              className="w-full sm:w-auto px-3.5 py-2 min-h-[38px] rounded-xl bg-sky-600 hover:bg-sky-700 active:bg-sky-800 text-white text-xs font-black shadow-xs transition active:scale-95 cursor-pointer shrink-0"
+            >
+              Ativar Avisos
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="px-3.5 py-2.5 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/35 border border-emerald-200/90 dark:border-emerald-800/80 flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-2 min-w-0">
+            <BellRing className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <span className="text-[11px] sm:text-xs font-bold text-emerald-900 dark:text-emerald-200 truncate">
+              Alarmes ativos mesmo com o app off
+            </span>
+          </div>
+          {onTestBackgroundAlarm && (
+            <button
+              type="button"
+              onClick={onTestBackgroundAlarm}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 hover:bg-emerald-100/70 dark:hover:bg-slate-700 border border-emerald-200 dark:border-emerald-800 text-[11px] font-extrabold text-emerald-800 dark:text-emerald-300 transition active:scale-95 cursor-pointer shrink-0"
+              title="Agenda um aviso real para daqui a 5 segundos para testar com o app fechado"
+            >
+              <Sparkles className="w-3 h-3" />
+              <span>Testar c/ app off (5s)</span>
+            </button>
+          )}
+        </div>
+      )}
 
       {/* 2 Big Cards - 1 Tap Away (Water and Medicine) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 lg:gap-6">

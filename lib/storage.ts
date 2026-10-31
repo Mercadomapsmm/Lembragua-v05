@@ -1,5 +1,10 @@
 import { useSyncExternalStore } from 'react';
 import { AppData, WaterState, MedicineState } from './types';
+import {
+  mirrorAppDataToIDB,
+  consumePendingSWConfirmations,
+  PendingSWConfirmation,
+} from './idb';
 
 const STORAGE_KEY = 'habitos_simples_v1';
 
@@ -185,6 +190,8 @@ export function loadAppData(): AppData {
 
     if (needsSave || 'exercise' in parsed || 'sleep' in parsed || 'dailyEmojis' in parsed) {
       saveAppData(sanitizedData);
+    } else {
+      mirrorAppDataToIDB(sanitizedData).catch(() => {});
     }
     cachedData = sanitizedData;
     isLoaded = true;
@@ -205,8 +212,69 @@ export function saveAppData(data: AppData): void {
     } catch (err) {
       console.error('Failed to save data:', err);
     }
+    mirrorAppDataToIDB(data).catch(() => {});
   }
   emitChange();
+}
+
+export async function reconcileBackgroundConfirmations(): Promise<boolean> {
+  if (typeof window === 'undefined') return false;
+  const pending: PendingSWConfirmation[] = await consumePendingSWConfirmations();
+  if (pending.length === 0) return false;
+
+  const current = loadAppData();
+  const todayStr = getTodayString();
+  let nextWater: WaterState = { ...current.water };
+  let nextMedicines = [...current.medicine.medicines];
+  let changed = false;
+
+  for (const item of pending) {
+    if (item.alertType === 'water') {
+      if (item.date === todayStr) {
+        const slots = nextWater.confirmedSlots || [];
+        if (!slots.includes(item.time)) {
+          nextWater = {
+            ...nextWater,
+            consumedMl: nextWater.consumedMl + 250,
+            confirmedSlots: [...slots, item.time],
+          };
+          changed = true;
+        }
+      }
+    } else if (item.alertType === 'medicine' && item.medicineId) {
+      nextMedicines = nextMedicines.map((med) => {
+        if (med.id !== item.medicineId) return med;
+        const already = med.history.some(
+          (h) => h.date === item.date && h.time === item.time
+        );
+        if (already) return med;
+        changed = true;
+        return {
+          ...med,
+          history: [
+            ...med.history,
+            {
+              date: item.date,
+              time: item.time,
+              takenAt: item.confirmedAtClock || item.time,
+            },
+          ],
+        };
+      });
+    }
+  }
+
+  if (changed) {
+    saveAppData({
+      ...current,
+      water: nextWater,
+      medicine: {
+        ...current.medicine,
+        medicines: nextMedicines,
+      },
+    });
+  }
+  return changed;
 }
 
 export function useAppData(): [AppData, (updater: (prev: AppData) => AppData) => void] {

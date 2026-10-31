@@ -1,14 +1,24 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { HabitTab, WaterState, MedicineState, AppData } from '@/lib/types';
-import { useAppData, loadAppData, getTodayString } from '@/lib/storage';
+import {
+  useAppData,
+  loadAppData,
+  getTodayString,
+  reconcileBackgroundConfirmations,
+} from '@/lib/storage';
 import {
   checkActiveAlerts,
   ActiveAlert,
   triggerAlertEffects,
   sendBrowserNotification,
   hasNotificationPermission,
+  enableBackgroundAlarms,
+  disableBackgroundAlarms,
+  syncBackgroundSchedule,
+  closeSystemNotification,
+  triggerBackgroundTestAlarm,
   ALERT_REPEAT_INTERVAL_MS,
 } from '@/lib/notifications';
 import { Header } from '@/components/Header';
@@ -21,7 +31,9 @@ import { ActiveAlertBanner } from '@/components/ActiveAlertBanner';
 import { InstallAppModal } from '@/components/InstallAppModal';
 import { usePWAInstall } from '@/hooks/usePWAInstall';
 import { AnimatePresence, motion } from 'motion/react';
-import { WifiOff, CheckCircle2, RotateCcw } from 'lucide-react';
+import { WifiOff, CheckCircle2, RotateCcw, BellRing, AlertCircle, X } from 'lucide-react';
+
+const BG_PAUSED_KEY = 'lembragua_bg_paused';
 
 export default function Page() {
   const [data, updateData] = useAppData();
@@ -30,29 +42,118 @@ export default function Page() {
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
   const [isAppClosed, setIsAppClosed] = useState(false);
   const [activeAlert, setActiveAlert] = useState<ActiveAlert | null>(null);
-  const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(() =>
-    hasNotificationPermission()
-  );
+  const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    const isPaused = localStorage.getItem(BG_PAUSED_KEY) === '1';
+    return hasNotificationPermission() && !isPaused;
+  });
+  const [permissionNotice, setPermissionNotice] = useState<string | null>(null);
+  const [testAlarmCountdown, setTestAlarmCountdown] = useState<number | null>(null);
   const [isOnline, setIsOnline] = useState<boolean>(() =>
     typeof navigator !== 'undefined' ? navigator.onLine : true
   );
   // Track last triggered timestamp and repeat count for 3-minute recurring alerts
-  const alertRepeatTrackingRef = useRef<Map<string, { lastTriggeredAt: number; count: number }>>(new Map());
+  const alertRepeatTrackingRef = useRef<Map<string, { lastTriggeredAt: number; count: number }>>(
+    new Map()
+  );
 
-  // Listen to connectivity changes
+  // Listen to connectivity changes & visibility reconciliation from Service Worker
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
+    const handleVisibilityOrFocus = () => {
+      if (document.visibilityState === 'visible') {
+        reconcileBackgroundConfirmations().catch(() => {});
+        const isPaused = localStorage.getItem(BG_PAUSED_KEY) === '1';
+        setNotificationsEnabled(hasNotificationPermission() && !isPaused);
+      }
+    };
+
+    reconcileBackgroundConfirmations().catch(() => {});
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
+    window.addEventListener('focus', handleVisibilityOrFocus);
+    document.addEventListener('visibilitychange', handleVisibilityOrFocus);
     window.onbeforeunload = null;
 
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('focus', handleVisibilityOrFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
     };
   }, []);
+
+  // Listen to real-time messages from the Service Worker (background push, confirmations, open)
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+
+    const handleSWMessage = (event: MessageEvent) => {
+      const msg = event.data;
+      if (!msg || typeof msg !== 'object') return;
+
+      if (msg.type === 'SW_ALERT_CONFIRMED') {
+        reconcileBackgroundConfirmations().catch(() => {});
+        if (msg.alertId) {
+          alertRepeatTrackingRef.current.delete(msg.alertId);
+          setActiveAlert((prev) => (prev?.id === msg.alertId ? null : prev));
+        }
+      } else if (msg.type === 'SW_OPEN_APP') {
+        setIsAppClosed(false);
+        reconcileBackgroundConfirmations().catch(() => {});
+      } else if (msg.type === 'SW_ALARM_TRIGGERED' && msg.alert) {
+        const swAlert = msg.alert;
+        if (swAlert.id === 'lembragua-test-alarm') {
+          triggerAlertEffects('water', loadAppData());
+          return;
+        }
+        const nowMs = Date.now();
+        alertRepeatTrackingRef.current.set(swAlert.id, {
+          lastTriggeredAt: nowMs,
+          count: swAlert.repeatCount || 1,
+        });
+        const mappedType: 'water' | 'medicine' =
+          swAlert.alertType === 'medicine' ? 'medicine' : 'water';
+        setActiveAlert({
+          id: swAlert.id,
+          type: mappedType,
+          title: swAlert.rawTitle || swAlert.title,
+          message: swAlert.body || '',
+          medicineId: swAlert.medicineId,
+          time: swAlert.time || '',
+          repeatCount: swAlert.repeatCount || 1,
+        });
+        triggerAlertEffects(mappedType, loadAppData());
+      }
+    };
+
+    navigator.serviceWorker.addEventListener('message', handleSWMessage);
+    return () => {
+      navigator.serviceWorker.removeEventListener('message', handleSWMessage);
+    };
+  }, []);
+
+  // Sync schedule & subscription with Service Worker + Web Push server whenever data or toggle changes
+  useEffect(() => {
+    if (!data) return;
+    const todayStr = getTodayString();
+    const currentAlerts = checkActiveAlerts(data, todayStr);
+    const activeIds = currentAlerts
+      .filter((a) => alertRepeatTrackingRef.current.has(a.id))
+      .map((a) => a.id);
+
+    syncBackgroundSchedule(data, notificationsEnabled, activeIds).catch(() => {});
+  }, [data, notificationsEnabled]);
+
+  // Countdown timer for 5s closed-app test alarm
+  useEffect(() => {
+    if (testAlarmCountdown === null || testAlarmCountdown <= 0) return;
+    const timer = setTimeout(() => {
+      setTestAlarmCountdown((prev) => (prev !== null && prev > 1 ? prev - 1 : null));
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [testAlarmCountdown]);
 
   // Synchronize document dark class, color-scheme, status bar, and system navigation bar colors
   useEffect(() => {
@@ -156,7 +257,54 @@ export default function Page() {
     updateData(() => newData);
   };
 
-  // Periodic alarm verification: aciona de 3 em 3 minutos até ser confirmado
+  const handleEnableBackgroundAlarms = useCallback(async () => {
+    const currentData = loadAppData();
+    const granted = await enableBackgroundAlarms(currentData);
+    if (granted) {
+      localStorage.removeItem(BG_PAUSED_KEY);
+      setNotificationsEnabled(true);
+      setPermissionNotice(null);
+      updateData((prev) => ({
+        ...prev,
+        settings: { ...prev.settings, notificationsAllowed: true },
+      }));
+    } else {
+      setPermissionNotice(
+        'Para receber alarmes com o app off, permita as notificações nas configurações do navegador ou do celular.'
+      );
+    }
+  }, [updateData]);
+
+  const handleToggleNotifications = useCallback(async () => {
+    if (!notificationsEnabled) {
+      await handleEnableBackgroundAlarms();
+    } else {
+      localStorage.setItem(BG_PAUSED_KEY, '1');
+      setNotificationsEnabled(false);
+      await disableBackgroundAlarms(loadAppData());
+      updateData((prev) => ({
+        ...prev,
+        settings: { ...prev.settings, notificationsAllowed: false },
+      }));
+    }
+  }, [notificationsEnabled, handleEnableBackgroundAlarms, updateData]);
+
+  const handleTestBackgroundAlarm = useCallback(async () => {
+    const currentData = loadAppData();
+    const ok = await triggerBackgroundTestAlarm(currentData, 5000);
+    if (ok) {
+      localStorage.removeItem(BG_PAUSED_KEY);
+      setNotificationsEnabled(true);
+      setPermissionNotice(null);
+      setTestAlarmCountdown(5);
+    } else {
+      setPermissionNotice(
+        'Permita as notificações no navegador/celular para testar o alarme com o app off.'
+      );
+    }
+  }, []);
+
+  // Periodic alarm verification: aciona de 3 em 3 minutos até ser confirmado (inclusive na tela "Fechado")
   useEffect(() => {
     if (!data) return;
 
@@ -172,7 +320,7 @@ export default function Page() {
         }
       }
 
-      // Se o alerta ativo foi confirmado na interface, fecha a faixa
+      // Se o alerta ativo foi confirmado na interface ou pela notificação externa, fecha a faixa
       if (activeAlert && !activeIds.has(activeAlert.id)) {
         setActiveAlert(null);
       }
@@ -196,11 +344,15 @@ export default function Page() {
           };
 
           setActiveAlert(alertWithRepeat);
-          triggerAlertEffects(alert.type);
-          sendBrowserNotification(
-            newCount > 1 ? `(${newCount}º aviso) ${alert.title}` : alert.title,
-            `${alert.message} (Aciona a cada 3 min até confirmar)`
-          );
+          triggerAlertEffects(alert.type, data);
+          if (notificationsEnabled) {
+            sendBrowserNotification(
+              newCount > 1 ? `(${newCount}º aviso) ${alert.title}` : alert.title,
+              `${alert.message} (Aciona a cada 3 min até confirmar)`,
+              alertWithRepeat,
+              todayStr
+            ).catch(() => {});
+          }
           break; // Aciona o alerta pendente principal
         }
       }
@@ -211,7 +363,7 @@ export default function Page() {
     const interval = setInterval(checkAndTriggerAlerts, 5000);
 
     return () => clearInterval(interval);
-  }, [data, activeAlert]);
+  }, [data, activeAlert, notificationsEnabled]);
 
   // Quick drink 250ml
   const handleQuickDrinkWater = (amountMl: number) => {
@@ -232,6 +384,7 @@ export default function Page() {
 
     if (activeWaterAlert) {
       alertRepeatTrackingRef.current.delete(activeWaterAlert.id);
+      closeSystemNotification(activeWaterAlert.id).catch(() => {});
       if (activeAlert?.id === activeWaterAlert.id) {
         setActiveAlert(null);
       }
@@ -273,8 +426,9 @@ export default function Page() {
       }));
     }
 
-    // Remove do rastreamento de 3 em 3 minutos e fecha o alerta
+    // Remove do rastreamento de 3 em 3 minutos e fecha o alerta no app e no sistema
     alertRepeatTrackingRef.current.delete(alert.id);
+    closeSystemNotification(alert.id).catch(() => {});
     setActiveAlert(null);
   };
 
@@ -314,7 +468,9 @@ export default function Page() {
   };
 
   const handleCloseApp = () => {
-    // Fecha diretamente sem pedir nenhuma confirmação
+    // Sincroniza imediatamente a agenda com o Service Worker e Web Push antes de fechar
+    syncBackgroundSchedule(data, notificationsEnabled).catch(() => {});
+
     if (typeof window !== 'undefined') {
       window.onbeforeunload = null;
       try {
@@ -341,22 +497,48 @@ export default function Page() {
           theme === 'dark' ? 'dark ' : ''
         }min-h-dvh bg-[#ffffff] dark:bg-[#0f172a] text-slate-800 dark:text-slate-100 flex items-center justify-center p-4 selection:bg-sky-200 dark:selection:bg-sky-500/30`}
       >
+        {/* Mantém o alerta flutuante ativo mesmo na tela de app fechado */}
+        <ActiveAlertBanner
+          alert={activeAlert}
+          onDismiss={() => setActiveAlert(null)}
+          onConfirmAction={handleConfirmAlertAction}
+        />
+
         <div className="max-w-md w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 text-center shadow-xl animate-fade-in space-y-4">
           <div className="w-16 h-16 mx-auto rounded-3xl bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shadow-inner">
             <CheckCircle2 className="w-9 h-9 stroke-[2.2]" />
           </div>
           <div className="space-y-1">
             <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
-              Aplicativo Fechado
+              Aplicativo em Descanso (Off)
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-              Lembragua foi encerrado com sucesso. Seus dados de água e remédios continuam 100% salvos no seu aparelho.
+              Seus dados de água e remédios estão salvos e protegidos no aparelho.
             </p>
           </div>
-          <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 text-xs text-slate-600 dark:text-slate-300 font-semibold">
-            Você pode fechar esta aba ou janela com segurança.
-          </div>
-          <div className="pt-2">
+
+          {notificationsEnabled ? (
+            <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/80 text-xs text-emerald-900 dark:text-emerald-200 font-bold flex items-center justify-center gap-2">
+              <BellRing className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <span>Alarmes e avisos seguem ativos mesmo com o app fechado.</span>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <div className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-xs text-amber-900 dark:text-amber-200 font-semibold">
+                Ative os avisos abaixo para ser lembrado mesmo com a aba fechada:
+              </div>
+              <button
+                type="button"
+                onClick={handleEnableBackgroundAlarms}
+                className="w-full py-2.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-xs transition active:scale-95 cursor-pointer flex items-center justify-center gap-2"
+              >
+                <BellRing className="w-4 h-4" />
+                <span>Ativar Alarmes em 2º Plano</span>
+              </button>
+            </div>
+          )}
+
+          <div className="pt-1">
             <button
               type="button"
               onClick={() => setIsAppClosed(false)}
@@ -382,7 +564,7 @@ export default function Page() {
         currentTab={currentTab as HabitTab}
         onSelectTab={(tab) => setCurrentTab(tab)}
         notificationsEnabled={notificationsEnabled}
-        onToggleNotifications={() => setNotificationsEnabled((prev) => !prev)}
+        onToggleNotifications={handleToggleNotifications}
         theme={theme}
         onToggleTheme={handleToggleTheme}
         onCloseApp={handleCloseApp}
@@ -395,11 +577,31 @@ export default function Page() {
         onConfirmAction={handleConfirmAlertAction}
       />
 
+      {/* Permission Guidance Banner (Non-blocking replacement for alert) */}
+      {permissionNotice && (
+        <div className="max-w-4xl xl:max-w-5xl w-full mx-auto px-3 sm:px-5 md:px-6 pt-3">
+          <div className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/70 border border-amber-300 dark:border-amber-700 flex items-start justify-between gap-2.5 text-xs font-bold text-amber-950 dark:text-amber-200">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+              <span>{permissionNotice}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setPermissionNotice(null)}
+              className="p-0.5 rounded-lg text-amber-700 dark:text-amber-300 hover:bg-amber-200/50 cursor-pointer shrink-0"
+              aria-label="Fechar aviso"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Offline Toast Indicator */}
       {!isOnline && (
         <div className="fixed bottom-20 left-4 z-50 flex items-center gap-2 rounded-xl bg-slate-800 text-white px-3.5 py-2 text-xs font-bold shadow-lg border border-slate-700">
           <WifiOff className="w-4 h-4 text-amber-400" />
-          <span>Modo Offline: tudo salvo no aparelho.</span>
+          <span>Modo Offline: alarmes locais e dados salvos no aparelho.</span>
         </div>
       )}
 
@@ -427,6 +629,10 @@ export default function Page() {
                   onQuickDrinkWater={handleQuickDrinkWater}
                   onOpenInstall={() => setIsInstallModalOpen(true)}
                   isInstalled={isInstalled}
+                  notificationsEnabled={notificationsEnabled}
+                  onEnableBackgroundAlarms={handleEnableBackgroundAlarms}
+                  onTestBackgroundAlarm={handleTestBackgroundAlarm}
+                  testAlarmCountdown={testAlarmCountdown}
                 />
               )}
               {currentTab === 'water' && (
@@ -453,6 +659,10 @@ export default function Page() {
                   onSetTheme={handleSetTheme}
                   onOpenInstall={() => setIsInstallModalOpen(true)}
                   isInstalled={isInstalled}
+                  notificationsEnabled={notificationsEnabled}
+                  onToggleNotifications={handleToggleNotifications}
+                  onTestBackgroundAlarm={handleTestBackgroundAlarm}
+                  testAlarmCountdown={testAlarmCountdown}
                 />
               )}
             </motion.div>

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { cookies } from 'next/headers';
+import { ensurePushSchedulerStarted } from '@/lib/push-server';
 import './globals.css';
 
 export async function generateViewport(): Promise<Viewport> {
@@ -52,6 +53,7 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  ensurePushSchedulerStarted();
   const cookieStore = await cookies();
   const isServerDark = cookieStore.get('lembragua_theme')?.value === 'dark';
   const initialBarColor = isServerDark ? '#0f172a' : '#ffffff';
@@ -129,8 +131,9 @@ export default async function RootLayout({
               if ('serviceWorker' in navigator) {
                 window.addEventListener('load', function() {
                   var refreshing = false;
+                  var hadController = !!navigator.serviceWorker.controller;
                   navigator.serviceWorker.addEventListener('controllerchange', function() {
-                    if (!refreshing) {
+                    if (hadController && !refreshing) {
                       refreshing = true;
                       window.location.reload();
                     }

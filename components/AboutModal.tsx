@@ -6,6 +6,9 @@ import {
   ShieldCheck,
   Download,
   CheckCircle2,
+  BellRing,
+  BellOff,
+  Sparkles,
 } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 
@@ -16,6 +19,10 @@ interface AboutModalProps {
   onSetTheme?: (theme: 'light' | 'dark') => void;
   onOpenInstall?: () => void;
   isInstalled?: boolean;
+  notificationsEnabled?: boolean;
+  onToggleNotifications?: () => void;
+  onTestBackgroundAlarm?: () => void;
+  testAlarmCountdown?: number | null;
 }
 
 export function AboutModal({
@@ -23,6 +30,10 @@ export function AboutModal({
   onSetTheme,
   onOpenInstall,
   isInstalled = false,
+  notificationsEnabled = false,
+  onToggleNotifications,
+  onTestBackgroundAlarm,
+  testAlarmCountdown = null,
 }: AboutModalProps) {
   return (
     <div className="space-y-5 sm:space-y-6 pb-12 animate-fade-in w-full">
@@ -79,6 +90,69 @@ export function AboutModal({
             <span>Tela Dark (Escura)</span>
           </button>
         </div>
+      </div>
+
+      {/* Alarmes e Avisos com App Off (2º Plano) */}
+      <div className="p-4 rounded-3xl bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 shadow-xs space-y-3 transition-colors">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div
+              className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${
+                notificationsEnabled
+                  ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+              }`}
+            >
+              {notificationsEnabled ? (
+                <BellRing className="w-5 h-5" />
+              ) : (
+                <BellOff className="w-5 h-5" />
+              )}
+            </div>
+            <div>
+              <h3 className="text-sm font-black text-slate-900 dark:text-white">
+                Alarmes com App Off (2º Plano)
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                {notificationsEnabled
+                  ? 'Ativo: você recebe os avisos mesmo com o app fechado.'
+                  : 'Pausado: ative para receber avisos com o app fechado.'}
+              </p>
+            </div>
+          </div>
+          {onToggleNotifications && (
+            <button
+              type="button"
+              onClick={onToggleNotifications}
+              className={`px-3 py-1.5 rounded-xl text-xs font-black transition active:scale-95 cursor-pointer shrink-0 ${
+                notificationsEnabled
+                  ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700'
+                  : 'bg-sky-600 hover:bg-sky-700 text-white shadow-xs'
+              }`}
+            >
+              {notificationsEnabled ? '✓ Ativo' : 'Ativar'}
+            </button>
+          )}
+        </div>
+
+        {onTestBackgroundAlarm && (
+          <div className="pt-1">
+            {testAlarmCountdown !== null ? (
+              <div className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-700 text-xs font-bold text-amber-900 dark:text-amber-200 text-center">
+                Minimize ou feche o app agora! O alarme vai tocar em {testAlarmCountdown}s...
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={onTestBackgroundAlarm}
+                className="w-full py-2.5 px-3 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer"
+              >
+                <Sparkles className="w-4 h-4 text-sky-500" />
+                <span>Testar Alarme com App Fechado (em 5 segundos)</span>
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* App Installation Status / Download Banner */}
